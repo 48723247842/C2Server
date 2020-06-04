@@ -1,0 +1,29 @@
+
+             10                  11                     12
+   +----------------------------------------------------------+
+   |                                                          |
+   |                                                          |
+6  |     4                                              5     | 8
+   |                                                          |
+   |                                                          |
+   |                                                          |
+   |                                                          |
+   |                                                          |
+   |                                                          |
+7  |     1                       2                      3     | 9
+   |                                                          |
+   +----------------------------------------------------------+
+
+
+1  = Spotify Random Currated Playlist
+2  = Local Video TV Show
+3  = Netflix
+4  = Disney+
+5  = Twitch Live
+6  = Pause
+7  = Previous
+8  = Stop
+9  = Next
+10 = Odyssey with Youtube Live Background
+11 = Relaxing Music ?
+12 = Hulu

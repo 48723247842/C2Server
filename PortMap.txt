@@ -1,0 +1,12 @@
+
+6379 = Docker --> Redis --> Redis Server
+
+11001 = Docker? --> C2 Server --> Sanic HTTP Server
+
+11101 = PM2 --> Spotify DBUS Controller --> Sanic HTTP Server
+
+11201 = Docker? --> TV Controller --> Sanic HTTP Server
+
+11301 = Docker? --> Local Storage Controller --> Sanic HTTP Server
+
+10081 = PM2 --> DisneyPlus ChromeWrapper --> WebSocket

@@ -1,0 +1,7 @@
+
+
+Local Storage Controller
+========================
+
+	You have to make sure the vlc-daemon.service exists
+	Example is located in ~/WORKSPACE/PYTHON/VLCController
