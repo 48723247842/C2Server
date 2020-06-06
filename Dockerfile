@@ -12,6 +12,7 @@ RUN apk add bash
 RUN apk add nano
 
 RUN python3 -m pip install redis
+RUN python3 -m pip install redis-circular-list
 RUN python3 -m pip install sanic
 RUN python3 -m pip install requests
 

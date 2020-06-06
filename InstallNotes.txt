@@ -1,0 +1,216 @@
+lsudo apt-get update
+sudo apt install xfce4
+sudo apt install hardinfo
+sudo apt install stress-ng
+nproc
+stress-ng --cpu 2
+sudo apt install sysbench -y
+sysbench cpu --threads=2 run
+sudo apt-get install xfce4-systemload-plugin -y
+sudo apt-get install xfce4-cpugraph-plugin -y
+sudo apt install net-tools -y
+sudo apt-get install openssh-server -y
+sudo systemctl enable ssh
+sudo systemctl start ssh
+sudo ufw enable
+sudo hostnamectl set-hostname mediabox
+
+sudo passwd root
+su root
+
+usermod -aG sudo morphs
+echo "morphs ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+echo "PermitRootLogin no
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM yes
+X11Forwarding yes
+#X11DisplayOffset 10
+#X11UseLocalhost yes
+PrintMotd no
+Banner none
+AcceptEnv LANG LC_*
+Subsystem   sftp    /usr/lib/openssh/sftp-server
+ClientAliveInterval 3
+#X11Forwarding no
+#AllowTcpForwarding no
+#PermitTTY no
+#ForceCommand cvs server
+PubkeyAuthentication yes" > /etc/ssh/sshd_config
+
+systemctl reload sshd
+
+exit
+
+echo '
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+HISTCONTROL=ignoreboth
+shopt -s histappend
+HISTSIZE=1000
+HISTFILESIZE=2000
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+force_color_prompt=yes
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+    color_prompt=yes
+    else
+    color_prompt=
+    fi
+fi
+RED="\[$(tput setaf 1)\]"
+GREEN="\[$(tput setaf 2)\]"
+YELLOW="\[$(tput setaf 3)\]"
+BLUE="\[$(tput setaf 4)\]"
+MAGENTA="\[$(tput setaf 5)\]"
+CYAN="\[$(tput setaf 6)\]"
+RESET="\[$(tput sgr0)\]"
+if [ "$color_prompt" = yes ]; then
+    PS1="${GREEN}[\W]${RESET}${RED}@${RESET}${BLUE}\h${RESET}\n${MAGENTA}~~>${RESET} "
+else
+    PS1="${GREEN}[\W]${RESET}${RED}@${RESET}${BLUE}\h${RESET}\n${MAGENTA}~~>${RESET} "
+fi
+unset color_prompt force_color_prompt
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+fi
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi' | tee ~/.bashrc
+
+source ~/.bashrc
+
+sudo apt-get install docker.io -y
+sudo apt-get install docker-compose -y
+
+echo '#!/bin/bash
+sudo docker stop $(sudo docker ps -a -q)
+sudo docker rm $(sudo docker ps -a -q)
+sudo docker rmi $( sudo docker images -a -q )' | sudo tee /usr/local/bin/dockerDeleteAll
+
+sudo chmod +x /usr/local/bin/dockerDeleteAll
+
+echo "#!/bin/bash
+sudo docker images | grep none | awk '{ print $3; }' | xargs sudo docker rmi -f
+echo yes | sudo docker image prune -a
+sudo docker rmi $(sudo docker images -f 'dangling=true' -q) -f
+sudo docker rmi $(sudo docker images | grep '^<none' | awk '{print $3}')
+sudo docker rmi $(sudo docker images | grep "none" | awk '{print $3}')" | sudo tee /usr/local/bin/dockerDeleteNoneImages
+
+sudo chmod +x /usr/local/bin/dockerDeleteNoneImages
+
+sudo apt install magic-wormhole -y
+
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+
+source ~/.bashrc
+
+nvm install node
+
+sudo apt-get install xdotool -y
+
+sudo apt-get install wmctrl -y
+
+sudo apt-get install python3-pip -y
+
+Setup Chrome to Use Plain Text Keyring
+https://unix.stackexchange.com/a/330869
+
+Install Spotify
+Install python-class aka OurPythonDBusController (tobe published on pypi)
+Add Spotify to Startup Programs,
+aka Applications->Settings->Settings Manager->Session and Startup->Application Auto Start-->add
+	on login-> /usr/bin/spotify
+
+create keyboard shortcut for Super+r to = xfce4-appfinder --collapsed
+
+So.... follow directions here: https://stackoverflow.com/a/46726727
+to edit tampoermonkey scricpts from outside of normal editor
+
+basically, chrome->settings->extensions
+		Tampermonkey->details->allow access to file urls
+
+then just create some userscript with @require file:///home/morphs/path/to/userscript.js
+
+sudo apt-get install nmap -y
+
+sudo apt-get install xscreensaver -y
+
+sudo apt-get install mpv -y
+
+
+Create Daemon Services for VLC and Spotify
+
+sudo nano /etc/systemd/system/spotify-daemon.service
+[Unit]
+Description=Keeps Spotify Running
+After=network.target
+
+[Service]
+Restart=always
+RestartSec=3
+#User=morphs
+#Environment="DISPLAY=:0"
+#Environment="DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
+#ExecStart=/usr/bin/spotify
+ExecStart=/bin/bash -l -c 'su morphs -c "/usr/local/bin/startSpotify"'
+ExecReload=/usr/bin/pkill -9 spotify
+ExecStop=/usr/bin/pkill -9 spotify
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+sudo nano /etc/systemd/system/vlc-daemon.service
+[Unit]
+Description=Keeps VLC Running
+After=network.target
+
+[Service]
+Restart=always
+RestartSec=3
+User=morphs
+Environment="DISPLAY=:0"
+ExecStart=/usr/bin/vlc --intf telnet --telnet-password admin
+ExecReload=/usr/bin/pkill -9 vlc
+ExecStop=/usr/bin/pkill -9 vlc
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+sudo nano /usr/local/bin/startSpotify
+#!/bin/bash
+t="1"
+if [[ "$t" == "1" ]]; then
+        set -x
+        set -e
+        #export DISPLAY=:0;
+        echo "here"
+        export "DISPLAY=:0";/usr/bin/spotify
+fi
+
+sudo chmod +x /usr/local/bin/startSpotif
