@@ -7,6 +7,8 @@ from sanic import Sanic
 from sanic.response import json as sanic_json
 from sanic import response
 
+#import nest_asyncio
+
 from buttons.buttons_blueprint import buttons_blueprint
 
 # https://github.com/huge-success/sanic/tree/master/examples
@@ -75,6 +77,7 @@ def run_server():
 		host = '0.0.0.0'
 		port = config[ 'port' ]
 		app.run( host=host , port=port )
+		#nest_asyncio.apply()
 
 	except Exception as e:
 		print( "Couldn't Start C2 Media Box Controller Server" )

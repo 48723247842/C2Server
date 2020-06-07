@@ -4,11 +4,14 @@ from sanic import response
 
 import json
 import time
+from pprint import pprint
+
 import redis
 import redis_circular_list
 import requests
-from pprint import pprint
 
+import asyncio
+import websockets
 
 def redis_connect():
 	try:
@@ -20,6 +23,21 @@ def redis_connect():
 			)
 		return redis_connection
 	except Exception as e:
+		return False
+
+async def _websocket_send( host , message ):
+	async with websockets.connect( host ) as websocket:
+		await websocket.send( json.dumps( message ) )
+		result = await websocket.recv()
+		return result
+
+def websocket_send( host , message ):
+	try:
+		result = asyncio.get_event_loop().run_until_complete( _websocket_send( host , message ) )
+		print( result )
+		return result
+	except Exception as e:
+		print( e )
 		return False
 
 json_headers = {
@@ -37,7 +55,6 @@ def commands_root( request ):
 def spotify_playlists_currated( request ):
 	result = { "message": "failed" }
 	try:
-
 		# This Needs To Be Moved into the Spotify WebServer
 		# All the C2 Server Should be is a "unaware" router
 		redis_connection = redis_connect()
@@ -46,11 +63,14 @@ def spotify_playlists_currated( request ):
 		if current_mode is not None:
 			current_mode = str( current_mode , 'utf-8' )
 			current_mode = json.loads( current_mode )
-			result["stop_current_mode_endpoint"] = current_mode["control_endpoints"]["stop"]
-			result["stop_current_mode_response"] = requests.get( result["stop_current_mode_endpoint"] , headers=json_headers  )
-			result["stop_current_mode_response"].raise_for_status()
-			result["stop_current_mode_response"] = result["stop_current_mode_response"].json()
-			#time.sleep( 1 )
+			if "websocket" in current_mode["control_endpoints"]:
+				websocket_send( current_mode["control_endpoints"]["websocket"]["host"] , current_mode["control_endpoints"]["websocket"]["stop"] )
+			else:
+				result["stop_current_mode_endpoint"] = current_mode["control_endpoints"]["stop"]
+				result["stop_current_mode_response"] = requests.get( result["stop_current_mode_endpoint"] , headers=json_headers  )
+				result["stop_current_mode_response"].raise_for_status()
+				result["stop_current_mode_response"] = result["stop_current_mode_response"].json()
+				#time.sleep( 1 )
 
 		uri = redis_circular_list.next( redis_connection , "STATE.SPOTIFY.LIBRARY.PLAYLISTS.CURRATED" )
 		# This Needs To Be Moved into the Spotify WebServer
@@ -108,7 +128,6 @@ def spotify_playlists_currated( request ):
 		result["error"] = str( e )
 	return json_result( result )
 
-
 @buttons_blueprint.route( "/2" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/local/tv/next" , methods=[ "GET" ] )
 def local_tv_next_episode( request ):
@@ -120,11 +139,14 @@ def local_tv_next_episode( request ):
 		if current_mode is not None:
 			current_mode = str( current_mode , 'utf-8' )
 			current_mode = json.loads( current_mode )
-			result["stop_current_mode_endpoint"] = current_mode["control_endpoints"]["stop"]
-			result["stop_current_mode_response"] = requests.get( result["stop_current_mode_endpoint"] , headers=json_headers  )
-			result["stop_current_mode_response"].raise_for_status()
-			result["stop_current_mode_response"] = result["stop_current_mode_response"].json()
-			#time.sleep( 1 )
+			if "websocket" in current_mode["control_endpoints"]:
+				websocket_send( current_mode["control_endpoints"]["websocket"]["host"] , current_mode["control_endpoints"]["websocket"]["stop"] )
+			else:
+				result["stop_current_mode_endpoint"] = current_mode["control_endpoints"]["stop"]
+				result["stop_current_mode_response"] = requests.get( result["stop_current_mode_endpoint"] , headers=json_headers  )
+				result["stop_current_mode_response"].raise_for_status()
+				result["stop_current_mode_response"] = result["stop_current_mode_response"].json()
+				#time.sleep( 1 )
 
 		mode = {
 			"button": 2 ,
@@ -171,7 +193,7 @@ def local_tv_next_episode( request ):
 			result["mode"] = mode
 
 			# VLC Full Screen
-			full_screen_response = requests.get( "http://127.0.0.1:11301/vlc/fullscreen/on" , headers=json_headers  )
+			full_screen_response = requests.get( "http://127.0.0.1:11301/vlc/fullscreen/on" , headers=json_headers )
 			full_screen_response.raise_for_status()
 			result["full_screen_response"] = full_screen_response.json()
 
@@ -184,13 +206,65 @@ def local_tv_next_episode( request ):
 		result["error"] = str( e )
 	return json_result( result )
 
+@buttons_blueprint.route( "/4" , methods=[ "GET" ] )
+@buttons_blueprint.route( "/websites/disney" , methods=[ "GET" ] )
+def local_tv_next_episode( request ):
+	result = { "message": "failed" }
+	try:
+		redis_connection = redis_connect()
+
+		current_mode = redis_connection.get( "STATE.MODE" )
+		if current_mode is not None:
+			current_mode = str( current_mode , 'utf-8' )
+			current_mode = json.loads( current_mode )
+			if "websocket" in current_mode["control_endpoints"]:
+				websocket_send( current_mode["control_endpoints"]["websocket"]["host"] , current_mode["control_endpoints"]["websocket"]["stop"] )
+			else:
+				result["stop_current_mode_endpoint"] = current_mode["control_endpoints"]["stop"]
+				result["stop_current_mode_response"] = requests.get( result["stop_current_mode_endpoint"] , headers=json_headers )
+				result["stop_current_mode_response"].raise_for_status()
+				result["stop_current_mode_response"] = result["stop_current_mode_response"].json()
+				#time.sleep( 1 )
+
+		mode = {
+			"button": 4 ,
+			"type": "websites" ,
+			"name": "Playing Disney+ , Next Movie" ,
+			"file_path": None ,
+			"state": False ,
+			"status": None ,
+			"control_endpoints": {
+				"websocket": {
+					"host": "ws://127.0.0.1:10081" ,
+					"pause": { "channel": "disney_plus" , "message": "pause" } ,
+					"resume": { "channel": "disney_plus" , "message": "resume" } ,
+					"play": { "channel": "disney_plus" , "message": "start" } ,
+					"stop": { "channel": "disney_plus" , "message": "stop" } ,
+					"previous": { "channel": "disney_plus" , "message": "previous" } ,
+					"next": { "channel": "disney_plus" , "message": "next" } ,
+					"status": { "channel": "disney_plus" , "message": "status" }
+				}
+			}
+		}
+
+		result["play_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["play"] )
+
+		print( "DisneyPlus Playing via Chrome" )
+		mode["state"] = "playing"
+		result["message"] = "success"
+		result["mode"] = mode
+		redis_connection.set( "STATE.MODE" , json.dumps( mode ) )
+
+	except Exception as e:
+		print( e )
+		result["error"] = str( e )
+	return json_result( result )
 
 @buttons_blueprint.route( "/6" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/pause" , methods=[ "GET" ] )
 def pause( request ):
 	result = { "message": "failed" }
 	try:
-
 		redis_connection = redis_connect()
 
 		mode = redis_connection.get( "STATE.MODE" )
@@ -199,19 +273,29 @@ def pause( request ):
 			raise Exception( "Control Endpoints" , "No Basic Control Endpoints Found in Current Mode" )
 
 		if mode["state"] == "playing":
-			pause_response = requests.get( mode["control_endpoints"]["pause"] , headers=json_headers )
-			pause_response.raise_for_status()
-			result["pause_response"] = pause_response.json()
+			if "websocket" in mode["control_endpoints"]:
+				result["pause_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["pause"] )
+			else:
+				pause_response = requests.get( mode["control_endpoints"]["pause"] , headers=json_headers )
+				pause_response.raise_for_status()
+				result["pause_response"] = pause_response.json()
 		else:
-			resume_response = requests.get( mode["control_endpoints"]["resume"] , headers=json_headers )
-			resume_response.raise_for_status()
-			result["resume_response"] = resume_response.json()
+			if "websocket" in mode["control_endpoints"]:
+				result["resume_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["resume"] )
+			else:
+				resume_response = requests.get( mode["control_endpoints"]["resume"] , headers=json_headers )
+				resume_response.raise_for_status()
+				result["resume_response"] = resume_response.json()
 
 		time.sleep( 1 )
 
-		status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
-		status_response.raise_for_status()
-		result["status_response"] = status_response.json()
+		if "websocket" in mode["control_endpoints"]:
+			result["status_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["status"] )
+		else:
+			status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
+			status_response.raise_for_status()
+			result["status_response"] = status_response.json()
+
 		mode["status_object"] = result["status_response"]
 		mode["state"] = mode["status_object"]["status"].lower()
 
@@ -226,10 +310,9 @@ def pause( request ):
 
 @buttons_blueprint.route( "/7" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/previous" , methods=[ "GET" ] )
-def pause( request ):
+def previous( request ):
 	result = { "message": "failed" }
 	try:
-
 		redis_connection = redis_connect()
 
 		mode = redis_connection.get( "STATE.MODE" )
@@ -237,15 +320,22 @@ def pause( request ):
 		if "control_endpoints" not in mode:
 			raise Exception( "Control Endpoints" , "No Basic Control Endpoints Found in Current Mode" )
 
-		previous_response = requests.get( mode["control_endpoints"]["previous"] , headers=json_headers )
-		previous_response.raise_for_status()
-		result["previous_response"] = previous_response.json()
+		if "websocket" in mode["control_endpoints"]:
+			result["previous_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["previous"] )
+		else:
+			previous_response = requests.get( mode["control_endpoints"]["previous"] , headers=json_headers )
+			previous_response.raise_for_status()
+			result["previous_response"] = previous_response.json()
 
 		time.sleep( 1 )
 
-		status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
-		status_response.raise_for_status()
-		result["status_response"] = status_response.json()
+		if "websocket" in mode["control_endpoints"]:
+			result["status_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["status"] )
+		else:
+			status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
+			status_response.raise_for_status()
+			result["status_response"] = status_response.json()
+
 		mode["status_object"] = result["status_response"]
 		mode["state"] = mode["status_object"]["status"].lower()
 
@@ -260,10 +350,9 @@ def pause( request ):
 
 @buttons_blueprint.route( "/8" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/stop" , methods=[ "GET" ] )
-def pause( request ):
+def stop( request ):
 	result = { "message": "failed" }
 	try:
-
 		redis_connection = redis_connect()
 
 		mode = redis_connection.get( "STATE.MODE" )
@@ -271,15 +360,22 @@ def pause( request ):
 		if "control_endpoints" not in mode:
 			raise Exception( "Control Endpoints" , "No Basic Control Endpoints Found in Current Mode" )
 
-		stop_response = requests.get( mode["control_endpoints"]["stop"] , headers=json_headers )
-		stop_response.raise_for_status()
-		result["stop_response"] = stop_response.json()
+		if "websocket" in mode["control_endpoints"]:
+			result["stop_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["stop"] )
+		else:
+			stop_response = requests.get( mode["control_endpoints"]["stop"] , headers=json_headers )
+			stop_response.raise_for_status()
+			result["stop_response"] = stop_response.json()
 
 		time.sleep( 1 )
 
-		status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
-		status_response.raise_for_status()
-		result["status_response"] = status_response.json()
+		if "websocket" in mode["control_endpoints"]:
+			result["status_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["status"] )
+		else:
+			status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
+			status_response.raise_for_status()
+			result["status_response"] = status_response.json()
+
 		mode["status_object"] = result["status_response"]
 		mode["state"] = mode["status_object"]["status"].lower()
 
@@ -294,7 +390,7 @@ def pause( request ):
 
 @buttons_blueprint.route( "/9" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/next" , methods=[ "GET" ] )
-def pause( request ):
+def next( request ):
 	result = { "message": "failed" }
 	try:
 
@@ -305,15 +401,22 @@ def pause( request ):
 		if "control_endpoints" not in mode:
 			raise Exception( "Control Endpoints" , "No Basic Control Endpoints Found in Current Mode" )
 
-		next_response = requests.get( mode["control_endpoints"]["next"] , headers=json_headers )
-		next_response.raise_for_status()
-		result["next_response"] = next_response.json()
+		if "websocket" in mode["control_endpoints"]:
+			result["next_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["next"] )
+		else:
+			next_response = requests.get( mode["control_endpoints"]["next"] , headers=json_headers )
+			next_response.raise_for_status()
+			result["next_response"] = next_response.json()
 
 		time.sleep( 1 )
 
-		status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
-		status_response.raise_for_status()
-		result["status_response"] = status_response.json()
+		if "websocket" in mode["control_endpoints"]:
+			result["status_response"] = websocket_send( mode["control_endpoints"]["websocket"]["host"] , mode["control_endpoints"]["websocket"]["status"] )
+		else:
+			status_response = requests.get( mode["control_endpoints"]["status"] , headers=json_headers )
+			status_response.raise_for_status()
+			result["status_response"] = status_response.json()
+
 		mode["status_object"] = result["status_response"]
 		mode["state"] = mode["status_object"]["status"].lower()
 
