@@ -41,6 +41,17 @@ def spotify_playlists_currated( request ):
 		# This Needs To Be Moved into the Spotify WebServer
 		# All the C2 Server Should be is a "unaware" router
 		redis_connection = redis_connect()
+
+		current_mode = redis_connection.get( "STATE.MODE" )
+		if current_mode is not None:
+			current_mode = str( current_mode , 'utf-8' )
+			current_mode = json.loads( current_mode )
+			result["stop_current_mode_endpoint"] = current_mode["control_endpoints"]["stop"]
+			result["stop_current_mode_response"] = requests.get( result["stop_current_mode_endpoint"] , headers=json_headers  )
+			result["stop_current_mode_response"].raise_for_status()
+			result["stop_current_mode_response"] = result["stop_current_mode_response"].json()
+			#time.sleep( 1 )
+
 		uri = redis_circular_list.next( redis_connection , "STATE.SPOTIFY.LIBRARY.PLAYLISTS.CURRATED" )
 		# This Needs To Be Moved into the Spotify WebServer
 		# All the C2 Server Should be is a "unaware" router
@@ -78,7 +89,6 @@ def spotify_playlists_currated( request ):
 			}
 		}
 
-		pprint( result )
 		if result["status_response"]["status"].lower() == "playing":
 			mode["state"] = "playing"
 			result["message"] = "success"
@@ -87,10 +97,11 @@ def spotify_playlists_currated( request ):
 		else:
 			raise Exception( "Could Not Get Spotify To Start Playing" )
 
-		# mode["state"] = "playing"
-		# result["message"] = "success"
-		# result["mode"] = mode
-		# redis_connection.set( "STATE.MODE" , json.dumps( mode ) )
+		pprint( result )
+		mode["state"] = "playing"
+		result["message"] = "success"
+		result["mode"] = mode
+		redis_connection.set( "STATE.MODE" , json.dumps( mode ) )
 
 	except Exception as e:
 		print( e )
@@ -100,10 +111,21 @@ def spotify_playlists_currated( request ):
 
 @buttons_blueprint.route( "/2" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/local/tv/next" , methods=[ "GET" ] )
-def spotify_playlists_currated( request ):
+def local_tv_next_episode( request ):
 	result = { "message": "failed" }
 	try:
 		redis_connection = redis_connect()
+
+		current_mode = redis_connection.get( "STATE.MODE" )
+		if current_mode is not None:
+			current_mode = str( current_mode , 'utf-8' )
+			current_mode = json.loads( current_mode )
+			result["stop_current_mode_endpoint"] = current_mode["control_endpoints"]["stop"]
+			result["stop_current_mode_response"] = requests.get( result["stop_current_mode_endpoint"] , headers=json_headers  )
+			result["stop_current_mode_response"].raise_for_status()
+			result["stop_current_mode_response"] = result["stop_current_mode_response"].json()
+			#time.sleep( 1 )
+
 		mode = {
 			"button": 2 ,
 			"type": "local" ,
@@ -123,11 +145,12 @@ def spotify_playlists_currated( request ):
 		}
 
 		result["play_endpoint"] = "http://127.0.0.1:11301/api/tv/play"
-		play_response = requests.get( result["play_endpoint"] , headers=json_headers  )
-		play_response.raise_for_status()
-		result["play_response"] = play_response.json()
+		result["play_response"] = requests.get( result["play_endpoint"] , headers=json_headers )
+		result["play_response"].raise_for_status()
+		result["play_response"] = result["play_response"].json()
 
-		time.sleep( 1 )
+		#time.sleep( 1 )
+		time.sleep( 3 )
 
 		result["status_endpoint"] = "http://127.0.0.1:11301/api/tv/status"
 		status_response = requests.get( result["status_endpoint"] , headers=json_headers )
@@ -135,7 +158,14 @@ def spotify_playlists_currated( request ):
 		result["status_response"] = status_response.json()
 		mode["status"] = result["status_response"]
 
+		if "status" not in result["status_response"]:
+			raise Exception( "No Status Response from :11301/api/tv/status" )
+		if "state" not in result["status_response"]["status"]:
+			raise Exception( "No State Stored in Status Response from :11301/api/tv/status" )
+
 		if result["status_response"]["status"]["state"].lower() == "playing":
+
+			print( "Local TV Show Started Playing via VLC" )
 			mode["state"] = "playing"
 			result["message"] = "success"
 			result["mode"] = mode
@@ -144,9 +174,6 @@ def spotify_playlists_currated( request ):
 			full_screen_response = requests.get( "http://127.0.0.1:11301/vlc/fullscreen/on" , headers=json_headers  )
 			full_screen_response.raise_for_status()
 			result["full_screen_response"] = full_screen_response.json()
-
-			# Signal Watch Guard Service
-
 
 			redis_connection.set( "STATE.MODE" , json.dumps( mode ) )
 		else:
