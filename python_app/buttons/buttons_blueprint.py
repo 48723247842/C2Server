@@ -168,7 +168,7 @@ def local_tv_next_episode( request ):
 @buttons_blueprint.route( "/4" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/disney" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/websites/disney" , methods=[ "GET" ] )
-def local_tv_next_episode( request ):
+def website_disney_plus( request ):
 	result = { "message": "failed" }
 	try:
 		# 1.) Get Current State
@@ -191,14 +191,14 @@ def local_tv_next_episode( request ):
 			"file_path": None ,
 			"status": None ,
 			"control_endpoints": {
-				"pause": "http://127.0.0.1:11301/api/tv/pause" ,
-				"resume": "http://127.0.0.1:11301/api/tv/resume" ,
-				"play": "http://127.0.0.1:11301/api/tv/play" ,
-				"stop": "http://127.0.0.1:11301/api/tv/stop" ,
-				"previous": "http://127.0.0.1:11301/api/tv/previous" ,
-				"next": "http://127.0.0.1:11301/api/tv/next" ,
-				"status": "http://127.0.0.1:11301/api/tv/status" ,
-				"fullscreen": "http://127.0.0.1:11301/vlc/fullscreen/on"
+				"pause": "http://127.0.0.1:11401/api/disney/pause" ,
+				"resume": "http://127.0.0.1:11401/api/disney/resume" ,
+				"play": "http://127.0.0.1:11401/api/disney/play" ,
+				"stop": "http://127.0.0.1:11401/api/disney/stop" ,
+				"previous": "http://127.0.0.1:11401/api/disney/previous" ,
+				"next": "http://127.0.0.1:11401/api/disney/next" ,
+				"status": "http://127.0.0.1:11401/api/disney/status" ,
+				"fullscreen": "http://127.0.0.1:11401/vlc/disney/fullscreen"
 			}
 		}
 
