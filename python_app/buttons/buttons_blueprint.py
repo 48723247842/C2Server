@@ -288,8 +288,8 @@ def stop( request ):
 			raise Exception( "Control Endpoints" , "No Basic Control Endpoints Found in Current Mode" )
 
 		# 2.) Press 'Stop Button' on Current State
-		if "stop" in current_mode["control_endpoints"]:
-			result["stop_result"] = get_json( current_mode["control_endpoints"]["stop"] )
+		if "stop" in mode["control_endpoints"]:
+			result["stop_result"] = get_json( mode["control_endpoints"]["stop"] )
 
 		# 3.) Get Status
 		time.sleep( 1 )
@@ -318,8 +318,8 @@ def next( request ):
 			raise Exception( "Control Endpoints" , "No Basic Control Endpoints Found in Current Mode" )
 
 		# 2.) Press 'Next Button' on Current State
-		if "next" in current_mode["control_endpoints"]:
-			result["next_result"] = get_json( current_mode["control_endpoints"]["next"] )
+		if "next" in mode["control_endpoints"]:
+			result["next_result"] = get_json( mode["control_endpoints"]["next"] )
 
 		# 3.) Get Status
 		time.sleep( 1 )
