@@ -59,6 +59,22 @@ buttons_blueprint = Blueprint( 'buttons_blueprint' , url_prefix='/button' )
 def commands_root( request ):
 	return response.text( "you are at the /button url\n" )
 
+@buttons_blueprint.route( "/state" , methods=[ "GET" ] )
+def spotify_playlists_currated( request ):
+	result = { "message": "failed" }
+	try:
+		redis_connection = redis_connect()
+		current_mode = redis_connection.get( "STATE.MODE" )
+		if current_mode is not None:
+			current_mode = str( current_mode , 'utf-8' )
+			current_mode = json.loads( current_mode )
+		result["message"] = "success"
+		result["mode"] = current_mode
+	except Exception as e:
+		print( e )
+		result["error"] = str( e )
+	return json_result( result )
+
 @buttons_blueprint.route( "/1" , methods=[ "GET" ] )
 @buttons_blueprint.route( "/spotify/playlists/currated" , methods=[ "GET" ] )
 def spotify_playlists_currated( request ):
@@ -96,7 +112,7 @@ def spotify_playlists_currated( request ):
 				"stop": "http://127.0.0.1:11101/api/stop" ,
 				"previous": "http://127.0.0.1:11101/api/previous" ,
 				"next": "http://127.0.0.1:11101/api/next" ,
-				"status": "http://127.0.0.1:11101/api/get/playback/status"
+				"status": "http://127.0.0.1:11101/api/status"
 			}
 		}
 
@@ -132,7 +148,6 @@ def local_tv_next_episode( request ):
 			"button": 2 ,
 			"type": "local_tv" ,
 			"name": "Playing Local TV Show , Next Episode" ,
-			"file_path": None ,
 			"status": None ,
 			"control_endpoints": {
 				"pause": "http://127.0.0.1:11301/api/tv/pause" ,
@@ -232,9 +247,9 @@ def pause( request ):
 			result["pause_result"] = get_json( mode["control_endpoints"]["pause"] )
 
 		# 3.) Get Status
-		time.sleep( 1 )
-		result["status_response"] = get_json( mode["control_endpoints"]["status"] )
-		mode["status"] = result["status_response"]
+		# time.sleep( 1 )
+		# result["status_response"] = get_json( mode["control_endpoints"]["status"] )
+		# mode["status"] = result["status_response"]
 
 		# 4.) Save State
 		result["message"] = "success"
